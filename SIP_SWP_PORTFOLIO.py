@@ -166,5 +166,5 @@ st.markdown("""
 """)
 
 # Footer
-st.caption("Designed with Paramjeet")
+st.caption("Designed by Paramjeet")
 
