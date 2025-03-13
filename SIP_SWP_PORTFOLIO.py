@@ -135,7 +135,7 @@ conversion_choice = st.selectbox("Convert values to:", list(conversion_options.k
 
 conversion_factor = conversion_options[conversion_choice]
 
-# Summary data (converted values)
+# ✅ Format values directly when creating the DataFrame:
 summary_data = {
     "Parameter": [
         "Total SIP Investment",
@@ -143,18 +143,19 @@ summary_data = {
         "Total SWP Withdrawal",
         "Portfolio Value After SWP"
     ],
-    "Value": [
-        (sip_amount * sip_years * 12) / conversion_factor,
-        sip_value_before_swp / conversion_factor,
-        (swp_amount * swp_years * 12) / conversion_factor,
-        final_value / conversion_factor
+    "Value (₹)": [
+        f"{(sip_amount * sip_years * 12) / conversion_factor:,.2f}",
+        f"{sip_value_before_swp / conversion_factor:,.2f}",
+        f"{(swp_amount * swp_years * 12) / conversion_factor:,.2f}",
+        f"{final_value / conversion_factor:,.2f}"
     ]
 }
 
 summary_df = pd.DataFrame(summary_data)
 
-# Display summary table
-st.table(summary_df.style.format("{:,.2f}"))
+# ✅ Directly use st.table() without `.style.format()`:
+st.table(summary_df)
+
 
 # ✅ Final Summary
 st.markdown("""
