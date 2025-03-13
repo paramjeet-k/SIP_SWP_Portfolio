@@ -129,5 +129,4 @@ st.markdown("""
 """)
 
 # Footer
-st.caption("Designed with ❤️ by ChatGPT")
 
