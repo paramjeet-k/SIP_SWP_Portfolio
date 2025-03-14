@@ -6,29 +6,46 @@ import pandas as pd
 # Streamlit UI Setup
 st.set_page_config(page_title="SIP + SWP Calculator", layout="wide")
 
-# Function to calculate SIP + SWP together
+# Function to calculate SIP + SWP together and generate cash flow breakdown
 def calculate_sip_swp(monthly_investment, sip_rate, swp_amount, swp_rate, sip_months, swp_start_month, swp_months):
     rate_sip = (sip_rate / 100) / 12
     rate_swp = (swp_rate / 100) / 12
     balance = 0
-    balance_history = []
+    
+    # DataFrame to store monthly details
+    cashflow_data = []
     
     for month in range(sip_months):
-        # SIP contribution (if SIP is still active)
-        balance = (balance + monthly_investment) * (1 + rate_sip)
+        sip_contribution = monthly_investment if month < sip_months else 0
         
-        # Start SWP if within the SWP window
+        # Interest earned before withdrawal
+        interest_earned = balance * rate_sip
+        
+        # Update balance based on SIP and interest earned
+        balance = (balance + sip_contribution) * (1 + rate_sip)
+        
+        # SWP withdrawal
+        swp_withdrawal = 0
         if swp_start_month <= month < swp_start_month + swp_months:
-            balance -= swp_amount
-            
-        # Store balance for tracking
-        balance_history.append(balance)
+            swp_withdrawal = swp_amount
+            balance -= swp_withdrawal
         
-        # If balance becomes negative, stop withdrawals
+        # Store cash flow data
+        cashflow_data.append({
+            'Month': month + 1,
+            'SIP Contribution': sip_contribution,
+            'SWP Withdrawal': swp_withdrawal,
+            'Interest Earned': interest_earned,
+            'Net Balance': balance
+        })
+        
         if balance <= 0:
             break
     
-    return balance, balance_history
+    # Convert to DataFrame
+    cashflow_df = pd.DataFrame(cashflow_data)
+    
+    return balance, cashflow_df
 
 # Title
 st.title("📈 SIP + SWP Calculator")
@@ -63,20 +80,38 @@ swp_start_month = swp_start_year * 12
 swp_months = swp_years * 12
 
 # ✅ Run SIP + SWP Calculation Together
-final_value, balance_history = calculate_sip_swp(sip_amount, sip_rate, swp_amount, swp_rate, sip_months, swp_start_month, swp_months)
+final_value, cashflow_df = calculate_sip_swp(sip_amount, sip_rate, swp_amount, swp_rate, sip_months, swp_start_month, swp_months)
 
 # 📊 Portfolio Tracker
 st.subheader("📊 Portfolio Tracker")
 
 # Plot Portfolio Value Over Time
 fig, ax = plt.subplots(figsize=(12, 6))
-ax.plot(balance_history, label="Portfolio Value", color='blue', linewidth=2)
+ax.plot(cashflow_df['Month'], cashflow_df['Net Balance'], label="Portfolio Value", color='blue', linewidth=2)
 ax.axhline(0, color='red', linestyle='--', label="Zero Balance")
-ax.set_xlabel("Months")
+ax.set_xlabel("Month")
 ax.set_ylabel("Portfolio Value (₹)")
 ax.set_title("Portfolio Value Over Time (SIP + SWP)")
 ax.legend()
 st.pyplot(fig)
+
+# 📋 Growth Table (Detailed Monthly Breakdown)
+if st.checkbox("Show Growth Table"):
+    st.write(cashflow_df)
+
+# ✅ Option to Show Pie Chart
+if st.checkbox("Show Pie Chart of Contributions"):
+    total_sip = cashflow_df['SIP Contribution'].sum()
+    total_swp = cashflow_df['SWP Withdrawal'].sum()
+    total_interest = cashflow_df['Interest Earned'].sum()
+    
+    pie_labels = ['Total SIP Contribution', 'Total SWP Withdrawal', 'Total Interest Earned']
+    pie_values = [total_sip, total_swp, total_interest]
+    
+    fig, ax = plt.subplots()
+    ax.pie(pie_values, labels=pie_labels, autopct='%.1f%%', startangle=90)
+    ax.set_title("Contribution Breakdown (SIP vs SWP vs Interest)")
+    st.pyplot(fig)
 
 # 📋 Summary Table
 st.subheader("📋 Summary Table")
@@ -91,24 +126,24 @@ conversion_options = {
 }
 
 conversion_choice = st.selectbox("Convert values to:", list(conversion_options.keys()))
-
 conversion_factor = float(conversion_options[conversion_choice])
 
-# Convert and format values directly
+# Create Summary Table
 summary_data = {
     "Parameter": [
         "Total SIP Investment",
         "Total SWP Withdrawal",
+        "Total Interest Earned",
         "Portfolio Value After SIP + SWP"
     ],
     "Value (₹)": [
-        f"{(sip_amount * sip_years * 12) / conversion_factor:,.2f}",
-        f"{(swp_amount * swp_years * 12) / conversion_factor:,.2f}",
+        f"{(cashflow_df['SIP Contribution'].sum()) / conversion_factor:,.2f}",
+        f"{(cashflow_df['SWP Withdrawal'].sum()) / conversion_factor:,.2f}",
+        f"{(cashflow_df['Interest Earned'].sum()) / conversion_factor:,.2f}",
         f"{final_value / conversion_factor:,.2f}"
     ]
 }
 
-# Create DataFrame
 summary_df = pd.DataFrame(summary_data)
 
 # Display the table
@@ -120,7 +155,8 @@ st.markdown("""
 - SIP and SWP calculations are based on compounding interest.
 - SIP and SWP can now overlap and operate simultaneously.
 - Inflation adjustment reduces real value over time.
-- If the portfolio value becomes negative, withdrawals will stop.
+- Cash flow details are visible in the growth table.
+- Pie chart provides a clear breakdown of total contribution.
 """)
 
 # Footer
